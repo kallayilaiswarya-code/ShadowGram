@@ -1,241 +1,170 @@
 'use client'
 
-import { useState } from 'react'
-import { GraphCluster } from '../types/contracts'
+import { useEffect, useState } from 'react'
+import type { GraphCluster } from '../types/contracts'
 
 interface WhyCardModalProps {
   cluster: GraphCluster | null
   onClose: () => void
+  onQuarantine?: () => void
+  isQuarantined?: boolean
 }
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
-
-const USE_MOCK_GRAPH =
-  process.env.NEXT_PUBLIC_USE_MOCK_GRAPH === 'true'
 
 export default function WhyCardModal({
   cluster,
   onClose,
+  onQuarantine,
+  isQuarantined = false,
 }: WhyCardModalProps) {
   const [action, setAction] = useState<
     'isolate' | 'step_up_challenge' | 'release'
   >('isolate')
-
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
-  if (!cluster) {
-    return (
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-        <h2 className="text-lg font-medium">
-          Why is this cluster suspicious?
-        </h2>
+  // Accessible Escape key listener to close modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
 
-        <p className="mt-2 text-sm leading-6 text-white/50">
-          Select a suspicious cluster in the graph to inspect the available
-          evidence.
-        </p>
-      </div>
-    )
+  if (!cluster) {
+    return null
   }
 
-  const handleQuarantine = async () => {
+  const handleAction = async () => {
     setIsSubmitting(true)
     setMessage(null)
 
-    try {
-      /*
-       * DEVELOPMENT / MOCK MODE
-       *
-       * The backend is intentionally offline while we test
-       * the frontend. In mock mode we simulate a successful
-       * quarantine response instead of making a network request.
-       */
-      if (USE_MOCK_GRAPH) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, 500)
-        )
+    // Pure frontend simulation delay (no backend API call)
+    await new Promise((resolve) => setTimeout(resolve, 350))
 
-        setMessage(
-          `Mock quarantine action "${action}" submitted for cluster ${cluster.cluster_id}.`
-        )
-
-        return
-      }
-
-      /*
-       * REAL BACKEND MODE
-       *
-       * When mock mode is disabled, use the real
-       * /api/quarantine endpoint.
-       */
-      const response = await fetch(
-        `${API_BASE}/api/quarantine`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            cluster_id: cluster.cluster_id,
-            action,
-            reason:
-              'Coordinated multi-agent swarm detected via Louvain community clustering',
-            operator_id: 'OFFICER-04',
-          }),
-        }
-      )
-
-      if (!response.ok) {
-        throw new Error(
-          `Quarantine API returned ${response.status}`
-        )
-      }
-
-      setMessage(
-        `Action "${action}" submitted for cluster ${cluster.cluster_id}.`
-      )
-    } catch (error) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : 'Failed to submit quarantine action.'
-      )
-    } finally {
-      setIsSubmitting(false)
+    if (action === 'isolate' && onQuarantine) {
+      onQuarantine()
     }
+
+    setMessage(
+      `SIMULATION CONFIRMED: Cluster #${String(cluster.cluster_id).padStart(2, '0')} action set to "${action.toUpperCase()}".`
+    )
+    setIsSubmitting(false)
   }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-      {/* HEADER */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <span className="text-xs tracking-wider text-purple-300">
-            WHY CARD
-          </span>
+    <div
+      className="why-modal-backdrop"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Cluster explainability why card"
+    >
+      <div
+        className="why-modal-shell"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* MODAL HEADER */}
+        <div className="why-modal-header">
+          <div>
+            <span className="why-modal-eyebrow">
+              EXPLAINABLE BEHAVIORAL DOSSIER // FRONTEND SIMULATION
+            </span>
+            <h2 className="why-modal-title">
+              CLUSTER #{String(cluster.cluster_id).padStart(2, '0')} // BEHAVIORAL CORRELATION EVIDENCE
+            </h2>
+          </div>
 
-          <h2 className="mt-1 text-lg font-medium">
-            Cluster {cluster.cluster_id}
-          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="why-modal-close"
+            aria-label="Close why card dialog"
+          >
+            ✕
+          </button>
         </div>
 
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-lg px-2 py-1 text-white/50 hover:bg-white/10 hover:text-white"
-          aria-label="Close evidence card"
-        >
-          ×
-        </button>
-      </div>
+        {/* METRICS ROW */}
+        <div className="why-modal-metrics">
+          <div className="why-metric-card">
+            <span>CLUSTER SIZE</span>
+            <strong>{cluster.size} SESSIONS</strong>
+          </div>
 
-      {/* CLUSTER METRICS */}
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        <div className="rounded-xl bg-black/20 p-3">
-          <span className="text-xs text-white/40">
-            SIZE
-          </span>
+          <div className="why-metric-card">
+            <span>MODULARITY (Q)</span>
+            <strong>{cluster.modularity_q.toFixed(3)}</strong>
+          </div>
 
-          <div className="mt-1 text-xl">
-            {cluster.size}
+          <div className="why-metric-card">
+            <span>STATUS</span>
+            <strong style={{ color: isQuarantined ? '#ef4444' : '#10b981' }}>
+              {isQuarantined ? 'ISOLATED' : cluster.status.toUpperCase()}
+            </strong>
           </div>
         </div>
 
-        <div className="rounded-xl bg-black/20 p-3">
-          <span className="text-xs text-white/40">
-            MODULARITY
-          </span>
+        {/* FACTUAL REASONS (FROM CANONICAL CONTRACT) */}
+        <div className="why-modal-section">
+          <span className="why-section-label">FACTUAL EXPLAINABILITY REASONS</span>
 
-          <div className="mt-1 text-xl">
-            {cluster.modularity_q.toFixed(3)}
-          </div>
+          {cluster.factual_reasons.length === 0 ? (
+            <p className="why-empty-copy">
+              No factual reasons supplied for this cluster.
+            </p>
+          ) : (
+            <ul className="why-reasons-list">
+              {cluster.factual_reasons.map((reason, index) => (
+                <li key={index} className="why-reason-item">
+                  <span className="why-reason-num">0{index + 1}</span>
+                  <span className="why-reason-text">{reason}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
-      </div>
 
-      {/* FACTUAL REASONS */}
-      <div className="mt-5">
-        <h3 className="text-sm font-medium">
-          Factual reasons
-        </h3>
+        {/* CONTAINMENT ACTION CONTROLS */}
+        <div className="why-modal-section">
+          <span className="why-section-label">SIMULATED CONTAINMENT RESPONSE</span>
 
-        {cluster.factual_reasons.length === 0 ? (
-          <p className="mt-2 text-sm text-white/40">
-            No factual reasons were supplied by the graph API.
-          </p>
-        ) : (
-          <ul className="mt-3 space-y-2">
-            {cluster.factual_reasons.map((reason) => (
-              <li
-                key={reason}
-                className="rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white/70"
-              >
-                {reason}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+          <div className="why-action-row">
+            <select
+              value={action}
+              onChange={(e) =>
+                setAction(
+                  e.target.value as 'isolate' | 'step_up_challenge' | 'release'
+                )
+              }
+              className="why-select"
+              aria-label="Select simulated containment action"
+            >
+              <option value="isolate">ISOLATE (AUTONOMOUS SWARM QUARANTINE)</option>
+              <option value="step_up_challenge">STEP-UP BIOMETRIC CHALLENGE</option>
+              <option value="release">RELEASE (ORGANIC CONFIRMATION)</option>
+            </select>
 
-      {/* RESPONSE ACTION */}
-      <div className="mt-5 border-t border-white/10 pt-5">
-        <h3 className="text-sm font-medium">
-          Response action
-        </h3>
-
-        <p className="mt-1 text-xs leading-5 text-white/40">
-          Choose the operator action to send to the quarantine API.
-        </p>
-
-        <select
-          value={action}
-          onChange={(event) =>
-            setAction(
-              event.target.value as
-                | 'isolate'
-                | 'step_up_challenge'
-                | 'release'
-            )
-          }
-          className="mt-3 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none"
-        >
-          <option value="isolate">
-            Isolate
-          </option>
-
-          <option value="step_up_challenge">
-            Step-up challenge
-          </option>
-
-          <option value="release">
-            Release
-          </option>
-        </select>
-
-        <button
-          type="button"
-          onClick={handleQuarantine}
-          disabled={isSubmitting}
-          className="mt-3 w-full rounded-xl border border-purple-400/30 bg-purple-500/10 px-4 py-3 text-sm text-purple-200 transition hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {isSubmitting
-            ? 'Submitting…'
-            : 'Submit Response Action'}
-        </button>
-
-        {/* RESULT MESSAGE */}
-        {message && (
-          <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3 text-xs leading-5 text-white/60">
-            {message}
+            <button
+              type="button"
+              onClick={handleAction}
+              disabled={isSubmitting}
+              className="why-submit-btn"
+              aria-label="Execute simulated containment action"
+            >
+              {isSubmitting ? 'PROCESSING...' : 'EXECUTE ACTION'}
+            </button>
           </div>
-        )}
-      </div>
 
-      {/* SAFETY / SCOPE NOTE */}
-      <div className="mt-5 rounded-xl border border-white/10 bg-black/20 p-3 text-xs leading-5 text-white/40">
-        This card presents behavioral evidence supplied by the graph
-        analysis. It does not identify a person.
+          {message && <div className="why-status-msg">{message}</div>}
+        </div>
+
+        {/* ANALYST SAFETY NOTICE */}
+        <div className="why-safety-notice">
+          ANALYST SAFETY MODE: Behavioral relationship evidence only. No person-level identity claim.
+        </div>
       </div>
     </div>
   )

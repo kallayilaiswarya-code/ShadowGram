@@ -1,1060 +1,513 @@
-'use client'
+"use client";
 
-import { useMemo, useState } from 'react'
-import { motion } from 'framer-motion'
-import { useGraphData } from '../hooks/useGraphData'
-import GraphCanvas from '../components/GraphCanvas'
-import WhyCardModal from '../components/WhyCardModal'
-import KineticSpectrogram from '../components/KineticSpectrogram'
-import CyberAudioEngine from '../components/CyberAudioEngine'
+import { useMemo, useState } from "react";
+import type { GraphCluster, GraphNode } from "../types/contracts";
+import { MOCK_GRAPH } from "../data/mockGraph";
+import GraphCanvas from "../components/GraphCanvas";
+import KineticSpectrogram from "../components/KineticSpectrogram";
+import WhyCardModal from "../components/WhyCardModal";
 
-const behavioralSignals = [
-  {
-    number: '01',
-    title: 'Interaction Fingerprint',
-    description:
-      'Typing cadence, dwell time, flight time and pointer movement reveal behavioral rhythm.',
-  },
-  {
-    number: '02',
-    title: 'Navigation Pattern',
-    description:
-      'Repeated route sequences can reveal unusually similar account journeys.',
-  },
-  {
-    number: '03',
-    title: 'Temporal Coordination',
-    description:
-      'Micro-temporal arrival patterns help identify synchronized activity.',
-  },
-  {
-    number: '04',
-    title: 'Semantic Similarity',
-    description:
-      'Behavioral intent vectors expose similarities between otherwise separate sessions.',
-  },
-  {
-    number: '05',
-    title: 'Environment Signals',
-    description:
-      'Client-side environment characteristics provide another behavioral dimension.',
-  },
-]
+// Deterministic presentation attributes (not in frozen GraphNode schema)
+const ACTIVITY_MAP: Record<string, string> = {
+  "node-001": "coordinated navigation",
+  "node-002": "synchronized timing",
+  "node-003": "matching interaction",
+  "node-004": "normal browsing",
+  "node-005": "organic dwell",
+  "node-006": "kinetic outlier",
+};
 
-const timelineItems = [
-  {
-    title: 'Interaction',
-    description: 'Typing and pointer behavior converted into measurable features.',
-  },
-  {
-    title: 'Navigation',
-    description: 'Route sequences compared across behavioral sessions.',
-  },
-  {
-    title: 'Timing',
-    description: 'Arrival synchronization checked across related events.',
-  },
-  {
-    title: 'Content',
-    description: 'Semantic intent vectors compared for similarity.',
-  },
-  {
-    title: 'Environment',
-    description: 'Client environment signals add another evidence layer.',
-  },
-]
+const TIME_MAP: Record<string, string> = {
+  "node-001": "14:52:18",
+  "node-002": "14:52:16",
+  "node-003": "14:52:14",
+  "node-004": "14:51:59",
+  "node-005": "14:51:42",
+  "node-006": "14:50:11",
+};
 
-const pipelineSteps = [
-  'SIMULATED USERS',
-  'BROWSER TELEMETRY',
-  'FEATURE ENGINEERING',
-  'BEHAVIORAL VECTORS',
-  'SIMILARITY',
-  'BEHAVIORAL GRAPH',
-  'LOUVAIN',
-  'SHADOW CLUSTER',
-  'WHY / EVIDENCE',
-  'PREVENTION',
-]
-
-const architectureSteps = [
-  'Browser',
-  'JavaScript Telemetry',
-  'POST /telemetry',
-  'FastAPI',
-  'Feature Engineering',
-  'Python ML',
-  'Sentence Transformers',
-  'Cosine Similarity',
-  'NetworkX',
-  'Louvain',
-  'Next.js Dashboard',
-]
-
-function NetworkBackground() {
-  const nodes = [
-    { left: '66%', top: '22%', delay: 0 },
-    { left: '75%', top: '30%', delay: 0.5 },
-    { left: '82%', top: '42%', delay: 1 },
-    { left: '70%', top: '50%', delay: 1.5 },
-    { left: '88%', top: '58%', delay: 0.8 },
-    { left: '61%', top: '64%', delay: 1.8 },
-    { left: '78%', top: '73%', delay: 0.3 },
-    { left: '91%', top: '76%', delay: 1.2 },
-    { left: '54%', top: '34%', delay: 0.7 },
-    { left: '59%', top: '78%', delay: 1.6 },
-    { left: '84%', top: '20%', delay: 0.4 },
-    { left: '73%', top: '86%', delay: 1.1 },
-  ]
-
-  return (
-    <div className="shadowgram-network" aria-hidden="true">
-      <div className="shadowgram-network-grid" />
-
-      <svg
-        className="absolute inset-0 h-full w-full opacity-40"
-        viewBox="0 0 1000 700"
-        preserveAspectRatio="none"
-      >
-        <line x1="660" y1="150" x2="750" y2="210" stroke="rgba(139,92,246,.35)" />
-        <line x1="750" y1="210" x2="820" y2="294" stroke="rgba(139,92,246,.35)" />
-        <line x1="820" y1="294" x2="700" y2="350" stroke="rgba(34,211,238,.3)" />
-        <line x1="700" y1="350" x2="880" y2="406" stroke="rgba(139,92,246,.3)" />
-        <line x1="700" y1="350" x2="610" y2="448" stroke="rgba(34,211,238,.3)" />
-        <line x1="610" y1="448" x2="780" y2="511" stroke="rgba(139,92,246,.3)" />
-        <line x1="780" y1="511" x2="910" y2="532" stroke="rgba(34,211,238,.3)" />
-        <line x1="540" y1="238" x2="660" y2="150" stroke="rgba(139,92,246,.25)" />
-        <line x1="590" y1="546" x2="610" y2="448" stroke="rgba(139,92,246,.25)" />
-        <line x1="840" y1="140" x2="750" y2="210" stroke="rgba(34,211,238,.25)" />
-        <line x1="730" y1="602" x2="780" y2="511" stroke="rgba(139,92,246,.25)" />
-      </svg>
-
-      {nodes.map((node, index) => (
-        <span
-          key={index}
-          className="shadowgram-network-node"
-          style={{
-            left: node.left,
-            top: node.top,
-            animationDelay: `${node.delay}s`,
-          }}
-        />
-      ))}
-    </div>
-  )
-}
-
-function CountCard({
-  value,
-  label,
-}: {
-  value: string
-  label: string
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 14 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      className="shadowgram-stat-card liquid-glass"
-    >
-      <div className="shadowgram-stat-label">{label}</div>
-      <div className="shadowgram-stat-value">{value}</div>
-    </motion.div>
-  )
-}
+type Signal = {
+  label: string;
+  value: number;
+  code: string;
+};
 
 export default function Home() {
-  const { graph, loading, error, refresh } = useGraphData()
+  const [selectedSessionId, setSelectedSessionId] = useState<string>("session-001");
+  const [quarantined, setQuarantined] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<"3D" | "2D">("2D");
+  const [is3DFallback, setIs3DFallback] = useState<boolean>(false);
+  const [isWhyCardOpen, setIsWhyCardOpen] = useState<boolean>(false);
 
-  const [selectedClusterId, setSelectedClusterId] = useState<number | null>(
-    1
-  )
+  // Canonical selected node from MOCK_GRAPH
+  const selectedNode = useMemo<GraphNode>(
+    () =>
+      MOCK_GRAPH.nodes.find((node) => node.session_id === selectedSessionId) ??
+      MOCK_GRAPH.nodes[0],
+    [selectedSessionId]
+  );
 
-  const [demoStatus, setDemoStatus] = useState(
-    'Ready for behavioral simulation'
-  )
+  // Canonical selected cluster from MOCK_GRAPH
+  const selectedCluster = useMemo<GraphCluster>(
+    () =>
+      MOCK_GRAPH.clusters.find(
+        (cluster) => cluster.cluster_id === selectedNode.cluster_id
+      ) ?? MOCK_GRAPH.clusters[0],
+    [selectedNode]
+  );
 
-  const selectedCluster =
-    graph.clusters.find(
-      (cluster) => cluster.cluster_id === selectedClusterId
-    ) ?? null
+  // Dynamic signals reacting to selected session risk profile
+  const signals = useMemo<Signal[]>(() => {
+    const isSuspect = selectedNode.risk_label === "suspicious_syndicate";
+    const isAnomaly = selectedNode.risk_label === "anomaly_outlier";
+    const kinScore = Math.round(selectedNode.kinetic_jerk_score * 100);
 
-  const selectedClusterNodes = selectedCluster
-    ? graph.nodes.filter(
-        (node) => node.cluster_id === selectedCluster.cluster_id
-      )
-    : []
+    return [
+      { label: "INTERACTION", value: kinScore, code: "KIN" },
+      { label: "NAVIGATION", value: isSuspect ? 88 : isAnomaly ? 42 : 24, code: "NAV" },
+      { label: "TIMING", value: isSuspect ? 94 : isAnomaly ? 55 : 31, code: "TIME" },
+      { label: "CONTENT", value: isSuspect ? 86 : isAnomaly ? 38 : 15, code: "SEM" },
+      { label: "ENVIRONMENT", value: isSuspect ? 79 : isAnomaly ? 22 : 19, code: "ENV" },
+    ];
+  }, [selectedNode]);
 
-  const spectrogramIntensity =
-    selectedClusterNodes.length > 0
-      ? selectedClusterNodes.reduce(
-          (sum, node) => sum + node.kinetic_jerk_score,
-          0
-        ) / selectedClusterNodes.length
-      : 0.35
-
-  const suspiciousClusters = graph.clusters.filter(
-    (cluster) =>
-      cluster.status === 'active' &&
-      graph.nodes.some(
-        (node) =>
-          node.cluster_id === cluster.cluster_id &&
-          node.risk_label === 'suspicious_syndicate'
-      )
-  )
-
-  const suspiciousNodes = graph.nodes.filter(
-    (node) => node.risk_label === 'suspicious_syndicate'
-  )
-
-  const accountCount = Math.max(graph.nodes.length, 100)
-  const relationshipCount = Math.max(graph.links.length, 248)
-  const clusterCount = Math.max(suspiciousClusters.length, 3)
-
-  const detectionScore = useMemo(() => {
-    if (selectedClusterNodes.length === 0) {
-      return 0.35
+  // Dynamic evidence based on canonical cluster reasons
+  const evidenceItems = useMemo(() => {
+    if (selectedCluster.cluster_id === 1) {
+      return [
+        {
+          number: "01",
+          title: "TIMING SYNCHRONIZATION",
+          description: "Repeated actions occur within narrow temporal windows (Δt < 0.45s).",
+        },
+        {
+          number: "02",
+          title: "NAVIGATION SIMILARITY",
+          description: "Sessions follow matching route sequences (/auth -> /kyc -> /loan_submit).",
+        },
+        {
+          number: "03",
+          title: "INTERACTION PATTERN",
+          description: "Pointer and typing behaviour converges across sessions (jerk score: 0.92-0.95).",
+        },
+        {
+          number: "04",
+          title: "CONTENT SIMILARITY",
+          description: "Submitted content exhibits strong semantic overlap (cosine similarity: 0.89).",
+        },
+        {
+          number: "05",
+          title: "ENVIRONMENT SIGNAL",
+          description: "Browser and interaction environment characteristics overlap.",
+        },
+      ];
     }
 
-    return selectedClusterNodes.reduce(
-      (sum, node) => sum + node.kinetic_jerk_score,
-      0
-    ) / selectedClusterNodes.length
-  }, [selectedClusterNodes])
+    if (selectedCluster.cluster_id === 2) {
+      return [
+        {
+          number: "01",
+          title: "ORGANIC TIMING VARIANCE",
+          description: "Natural human variance in inter-keystroke flight times (Δt > 3.4s).",
+        },
+        {
+          number: "02",
+          title: "EXPLORATORY NAVIGATION",
+          description: "Non-linear navigation path with pauses and backwards route adjustments.",
+        },
+        {
+          number: "03",
+          title: "BIOMECHANICAL CURVATURE",
+          description: "Continuous velocity curves with natural neuromuscular jitter (jerk: 0.18-0.21).",
+        },
+        {
+          number: "04",
+          title: "DISTINCT INTENT VECTORS",
+          description: "Low semantic cosine similarity across application submissions.",
+        },
+        {
+          number: "05",
+          title: "STANDARD USER AGENT",
+          description: "Independent hardware canvas and typical desktop client fingerprint.",
+        },
+      ];
+    }
 
-  const runDemo = (status: string) => {
-    setDemoStatus(status)
-  }
-
-  if (loading) {
-    return (
-      <main className="shadowgram-page">
-        <div className="loading">Loading ShadowGram…</div>
-      </main>
-    )
-  }
+    return [
+      {
+        number: "01",
+        title: "BURST DISPERSION",
+        description: "Sporadic burst pattern without cross-session alignment.",
+      },
+      {
+        number: "02",
+        title: "ISOLATED ROUTE FLOW",
+        description: "Incomplete navigation funnel with drop-off prior to submission.",
+      },
+      {
+        number: "03",
+        title: "ELEVATED KINETIC JERK",
+        description: "High acceleration spikes detected, potentially assistive device or macro (jerk: 0.67).",
+      },
+      {
+        number: "04",
+        title: "DIVERGENT SEMANTICS",
+        description: "Intent vector does not correlate with primary syndicate clusters.",
+      },
+      {
+        number: "05",
+        title: "UNCORRELATED CLIENT",
+        description: "Client environment attributes diverge from syndicate network.",
+      },
+    ];
+  }, [selectedCluster]);
 
   return (
-    <main className="shadowgram-page">
-      {/* =====================================================
-          NAVIGATION
-      ====================================================== */}
+    <main className="shadowgram-shell">
+      {/* TOP HUD */}
+      <header className="top-hud">
+        <div className="brand-block">
+          <div className="brand-mark" aria-hidden="true">SG</div>
 
-      <nav className="shadowgram-nav">
-        <div className="shadowgram-nav-inner">
-          <a href="#overview" className="shadowgram-brand">
-            <span className="shadowgram-brand-icon">
-              ◇
-            </span>
-            SHADOWGRAM
-          </a>
-
-          <div className="shadowgram-nav-links">
-            <a href="#overview">Overview</a>
-            <a href="#detection">Detection</a>
-            <a href="#shadowgraph">ShadowGraph</a>
-            <a href="#evidence">Evidence</a>
-          </div>
-
-          <a
-            href="#live-demo"
-            className="shadowgram-nav-cta"
-          >
-            Launch Detection
-          </a>
-        </div>
-      </nav>
-
-      <div className="shadowgram-gradient-divider" />
-
-      {/* =====================================================
-          HERO
-      ====================================================== */}
-
-      <section
-        id="overview"
-        className="shadowgram-hero"
-      >
-        <NetworkBackground />
-
-        <div className="shadowgram-hero-content">
-          <div className="shadowgram-eyebrow">
-            BEHAVIORAL GRAPH INTELLIGENCE
-          </div>
-
-          <h1 className="shadowgram-hero-title">
-            Detect the{' '}
-            <span className="shadowgram-gradient-text">
-              Shadow.
-            </span>
-          </h1>
-
-          <p className="shadowgram-hero-description">
-            ShadowGram detects coordinated behavioral relationships
-            between accounts by combining interaction, navigation,
-            timing, semantic and environment signals into an
-            explainable behavioral graph.
-          </p>
-
-          <div className="shadowgram-hero-actions">
-            <a
-              href="#shadowgraph"
-              className="shadowgram-primary-button"
-            >
-              Explore ShadowGraph
-            </a>
-
-            <a
-              href="#live-demo"
-              className="shadowgram-secondary-button"
-            >
-              View Detection Demo
-            </a>
-          </div>
-
-          <div className="mt-14 grid max-w-3xl grid-cols-1 gap-3 md:grid-cols-3">
-            <div className="liquid-glass rounded-2xl p-5">
-              <div className="text-[9px] tracking-[0.18em] text-white/30">
-                NETWORK STATE
-              </div>
-
-              <div className="mt-3 text-sm text-white/75">
-                Behavioral graph active
-              </div>
-
-              <div className="mt-2 text-[10px] text-emerald-300/70">
-                {graph.nodes.length} visible sessions
-              </div>
-            </div>
-
-            <div className="liquid-glass rounded-2xl p-5">
-              <div className="text-[9px] tracking-[0.18em] text-white/30">
-                SHADOW CLUSTER
-              </div>
-
-              <div className="mt-3 text-sm text-white/75">
-                Candidate coordinated group
-              </div>
-
-              <div className="mt-2 text-[10px] text-purple-300/70">
-                Signals consistent with coordinated operation
-              </div>
-            </div>
-
-            <div className="liquid-glass rounded-2xl p-5">
-              <div className="text-[9px] tracking-[0.18em] text-white/30">
-                ANALYST MODE
-              </div>
-
-              <div className="mt-3 text-sm text-white/75">
-                Evidence-first investigation
-              </div>
-
-              <div className="mt-2 text-[10px] text-cyan-300/70">
-                No person-level identity claim
-              </div>
+          <div>
+            <div className="brand-name">SHADOWGRAM</div>
+            <div className="brand-subtitle">
+              BEHAVIORAL INTELLIGENCE COMMAND
             </div>
           </div>
         </div>
-      </section>
 
-      {/* =====================================================
-          BEHAVIORAL SIGNALS
-      ====================================================== */}
-
-      <section className="shadowgram-section">
-        <div className="shadowgram-container">
-          <div className="shadowgram-section-label">
-            FIVE BEHAVIORAL DIMENSIONS
-          </div>
-
-          <h2 className="shadowgram-section-title">
-            Behavior becomes evidence.
-          </h2>
-
-          <p className="shadowgram-section-description">
-            ShadowGram does not rely on one signal. Independent
-            behavioral dimensions converge into relationships that
-            analysts can inspect.
-          </p>
-
-          <div className="shadowgram-signal-grid">
-            {behavioralSignals.map((signal, index) => (
-              <motion.div
-                key={signal.number}
-                initial={{ opacity: 0, y: 18 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{
-                  duration: 0.35,
-                  delay: index * 0.05,
-                }}
-                className="shadowgram-signal-card liquid-glass"
-              >
-                <div className="shadowgram-signal-number">
-                  {signal.number}
-                </div>
-
-                <h3>{signal.title}</h3>
-
-                <p>{signal.description}</p>
-              </motion.div>
-            ))}
-          </div>
+        <div className="mission-title">
+          <span>SHADOWGRAM COMMAND CENTER</span>
+          <strong>// FRONTEND SIMULATION</strong>
         </div>
-      </section>
 
-      {/* =====================================================
-          CONVERGENCE
-      ====================================================== */}
-
-      <section
-        id="detection"
-        className="shadowgram-section"
-      >
-        <div className="shadowgram-container">
-          <div className="shadowgram-section-label">
-            MULTI-SIGNAL CONVERGENCE
-          </div>
-
-          <h2 className="shadowgram-section-title">
-            One signal can be noise.
-            <br />
-            Convergence is the signal.
-          </h2>
-
-          <div className="shadowgram-convergence">
-            <div className="shadowgram-convergence-row">
-              {[
-                'INTERACTION',
-                'NAVIGATION',
-                'TIMING',
-                'CONTENT',
-                'ENVIRONMENT',
-              ].map((item) => (
-                <span
-                  key={item}
-                  className="shadowgram-convergence-chip"
-                >
-                  {item}
-                </span>
-              ))}
-
-              <span className="shadowgram-convergence-arrow">
-                →
-              </span>
-
-              <span className="shadowgram-convergence-chip">
-                COMPOSITE SIMILARITY
-              </span>
-
-              <span className="shadowgram-convergence-arrow">
-                →
-              </span>
-
-              <span className="shadowgram-convergence-chip">
-                BEHAVIORAL RELATIONSHIP
-              </span>
-            </div>
-
-            <div className="shadowgram-score-panel liquid-glass">
-              <div className="shadowgram-score-value">
-                0.86
-              </div>
-
-              <div className="shadowgram-score-caption">
-                Example composite similarity · 3+ signal categories aligned
-              </div>
-            </div>
-          </div>
+        <div className="system-status">
+          <span className="status-dot" aria-hidden="true" />
+          <span>SYSTEM NOMINAL</span>
         </div>
-      </section>
+      </header>
 
-      {/* =====================================================
-          SHADOWGRAPH
-      ====================================================== */}
-
-      <section
-        id="shadowgraph"
-        className="shadowgram-section"
-      >
-        <div className="shadowgram-container">
-          <div className="shadowgram-section-label">
-            SHADOWGRAPH
+      {/* MAIN COCKPIT */}
+      <section className="cockpit-grid">
+        {/* LEFT TELEMETRY */}
+        <aside className="panel telemetry-panel">
+          <div className="panel-heading">
+            <span>01</span>
+            <div>
+              <h2>LIVE TELEMETRY</h2>
+              <p>/telemetry</p>
+            </div>
+            <span className="live-indicator">LIVE</span>
           </div>
 
-          <h2 className="shadowgram-section-title">
-            See the relationships.
-          </h2>
-
-          <p className="shadowgram-section-description">
-            Accounts become nodes. Behavioral relationships become
-            edges. Community detection exposes candidate clusters
-            for investigation.
-          </p>
-
-          <div className="shadowgram-stat-grid">
-            <CountCard
-              value={String(accountCount)}
-              label="ACCOUNTS ANALYZED"
-            />
-
-            <CountCard
-              value={String(relationshipCount)}
-              label="BEHAVIORAL RELATIONSHIPS"
-            />
-
-            <CountCard
-              value={String(clusterCount)}
-              label="SHADOW CLUSTERS"
-            />
-
-            <CountCard
-              value="5"
-              label="EVIDENCE SIGNALS"
-            />
-          </div>
-
-          <div className="shadowgram-dashboard-grid">
-            <div className="shadowgram-dashboard-panel liquid-glass">
-              <div className="shadowgram-panel-header">
-                <div>
-                  <h3 className="shadowgram-panel-title">
-                    Behavioral Relationship Graph
-                  </h3>
-
-                  <div className="shadowgram-panel-subtitle">
-                    React-Force-Graph · 3D WebGL with 2D fallback
-                  </div>
-                </div>
-
-                <span className="shadowgram-live-pill">
-                  {error ? 'MOCK MODE' : 'LIVE'}
-                </span>
-              </div>
-
-              <div className="shadowgram-graph-stage">
-                <GraphCanvas
-                  graph={graph}
-                  onClusterSelect={setSelectedClusterId}
-                />
-              </div>
+          <div className="telemetry-summary">
+            <div>
+              <strong>100</strong>
+              <span>SESSIONS</span>
             </div>
 
-            <div
-              id="evidence"
-              className="shadowgram-dashboard-panel liquid-glass shadowgram-evidence-panel"
-            >
-              <div className="shadowgram-panel-header">
-                <div>
-                  <h3 className="shadowgram-panel-title">
-                    Why are these accounts linked?
-                  </h3>
+            <div>
+              <strong>248</strong>
+              <span>RELATIONSHIPS</span>
+            </div>
+          </div>
 
-                  <div className="shadowgram-panel-subtitle">
-                    Evidence-first analyst view
-                  </div>
-                </div>
+          <div className="session-list" role="listbox" aria-label="Incoming behavioral sessions">
+            {MOCK_GRAPH.nodes.map((node) => {
+              const displayId = node.session_id.toUpperCase();
+              const isSelected = selectedSessionId === node.session_id;
+              const isSuspect = node.risk_label === "suspicious_syndicate";
+              const scorePercent = Math.round(node.kinetic_jerk_score * 100);
+              const activity = ACTIVITY_MAP[node.id] || "telemetry stream";
+              const time = TIME_MAP[node.id] || "14:50:00";
 
+              return (
                 <button
-                  type="button"
-                  onClick={refresh}
-                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[10px] text-white/55 transition hover:bg-white/10 hover:text-white"
+                  key={node.id}
+                  role="option"
+                  aria-selected={isSelected}
+                  className={`session-row ${isSelected ? "selected" : ""}`}
+                  onClick={() => setSelectedSessionId(node.session_id)}
+                  aria-label={`Select session ${displayId}, risk: ${isSuspect ? "suspect" : "human"}, score: ${scorePercent}%`}
                 >
-                  Refresh
-                </button>
-              </div>
-
-              <WhyCardModal
-                cluster={selectedCluster}
-                onClose={() => setSelectedClusterId(null)}
-              />
-
-              <div className="px-5 pb-5">
-                <KineticSpectrogram
-                  intensity={spectrogramIntensity}
-                />
-
-                <div className="mt-4">
-                  <CyberAudioEngine />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="liquid-glass rounded-2xl p-5">
-              <div className="text-[9px] tracking-[0.18em] text-white/30">
-                COMMUNITY DETECTION
-              </div>
-
-              <h3 className="mt-3 text-sm font-medium text-white/80">
-                Louvain community clustering
-              </h3>
-
-              <p className="mt-2 text-xs leading-6 text-white/40">
-                Related behavioral nodes are grouped into communities
-                so analysts can inspect candidate coordinated clusters.
-              </p>
-            </div>
-
-            <div className="liquid-glass rounded-2xl p-5">
-              <div className="text-[9px] tracking-[0.18em] text-white/30">
-                CURRENT SIGNAL
-              </div>
-
-              <h3 className="mt-3 text-sm font-medium text-white/80">
-                {selectedCluster
-                  ? `Cluster ${selectedCluster.cluster_id}`
-                  : 'No cluster selected'}
-              </h3>
-
-              <p className="mt-2 text-xs leading-6 text-white/40">
-                {selectedCluster
-                  ? `${selectedCluster.size} nodes · modularity ${selectedCluster.modularity_q.toFixed(3)}`
-                  : 'Select a node in the graph to inspect its behavioral evidence.'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* =====================================================
-          TIMELINE
-      ====================================================== */}
-
-      <section className="shadowgram-section">
-        <div className="shadowgram-container shadowgram-timeline">
-          <div className="shadowgram-section-label">
-            BEHAVIORAL TIMELINE
-          </div>
-
-          <h2 className="shadowgram-section-title">
-            Follow the evidence over time.
-          </h2>
-
-          <div className="shadowgram-timeline-track">
-            {timelineItems.map((item) => (
-              <div
-                key={item.title}
-                className="shadowgram-timeline-item"
-              >
-                <span className="shadowgram-timeline-dot" />
-
-                <h4>{item.title}</h4>
-
-                <p>{item.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* =====================================================
-          ANOMALY DETECTION
-      ====================================================== */}
-
-      <section className="shadowgram-section">
-        <div className="shadowgram-container">
-          <div className="shadowgram-section-label">
-            ANOMALY DETECTION
-          </div>
-
-          <h2 className="shadowgram-section-title">
-            Anomaly ≠ Fraud.
-          </h2>
-
-          <p className="shadowgram-section-description">
-            Isolation Forest can surface unusual behavioral activity.
-            ShadowGram keeps that signal separate from coordinated
-            relationship evidence so an anomaly is not automatically
-            treated as fraud.
-          </p>
-
-          <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="liquid-glass rounded-2xl p-6">
-              <div className="text-[9px] tracking-[0.18em] text-orange-300/70">
-                ISOLATION FOREST
-              </div>
-
-              <div className="mt-4 text-2xl font-semibold">
-                Outlier
-              </div>
-
-              <p className="mt-3 text-xs leading-6 text-white/40">
-                A behavioral pattern that differs from the expected
-                distribution.
-              </p>
-            </div>
-
-            <div className="liquid-glass rounded-2xl p-6">
-              <div className="text-[9px] tracking-[0.18em] text-purple-300/70">
-                GRAPH RELATIONSHIP
-              </div>
-
-              <div className="mt-4 text-2xl font-semibold">
-                Connection
-              </div>
-
-              <p className="mt-3 text-xs leading-6 text-white/40">
-                Similarity across independent behavioral dimensions
-                creates a relationship.
-              </p>
-            </div>
-
-            <div className="liquid-glass rounded-2xl p-6">
-              <div className="text-[9px] tracking-[0.18em] text-cyan-300/70">
-                ANALYST REVIEW
-              </div>
-
-              <div className="mt-4 text-2xl font-semibold">
-                Investigation
-              </div>
-
-              <p className="mt-3 text-xs leading-6 text-white/40">
-                Evidence is presented for review rather than used to
-                make a person-level identity claim.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* =====================================================
-          DETECTION PIPELINE
-      ====================================================== */}
-
-      <section className="shadowgram-section">
-        <div className="shadowgram-container">
-          <div className="shadowgram-section-label">
-            DETECTION PIPELINE
-          </div>
-
-          <h2 className="shadowgram-section-title">
-            From telemetry to explanation.
-          </h2>
-
-          <div className="shadowgram-pipeline">
-            <div className="shadowgram-pipeline-row">
-              {pipelineSteps.map((step, index) => (
-                <div
-                  key={step}
-                  className="flex items-center gap-2"
-                >
-                  <div className="shadowgram-pipeline-step liquid-glass">
-                    <span>
-                      {String(index + 1).padStart(2, '0')}
+                  <div className="session-topline">
+                    <span
+                      className={`session-type ${
+                        isSuspect ? "suspect" : "human"
+                      }`}
+                    >
+                      {isSuspect ? "SUSPECT" : "HUMAN"}
                     </span>
 
-                    <strong>{step}</strong>
+                    <span>{time}</span>
                   </div>
 
-                  {index < pipelineSteps.length - 1 && (
-                    <div className="shadowgram-pipeline-arrow">
-                      →
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+                  <strong>{displayId}</strong>
 
-      {/* =====================================================
-          PREVENTION
-      ====================================================== */}
-
-      <section className="shadowgram-section">
-        <div className="shadowgram-container">
-          <div className="shadowgram-section-label">
-            PREVENTION
-          </div>
-
-          <h2 className="shadowgram-section-title">
-            Contain the behavior, not the person.
-          </h2>
-
-          <p className="shadowgram-section-description">
-            The response layer focuses on proportional containment
-            and analyst review rather than blunt account bans.
-          </p>
-
-          <div className="shadowgram-prevention-grid">
-            <div className="shadowgram-prevention-card liquid-glass">
-              <div className="text-purple-300">01</div>
-
-              <h3 className="mt-5">
-                Additional Verification
-              </h3>
-
-              <p>
-                Step-up authentication can be applied when behavioral
-                evidence warrants additional assurance.
-              </p>
-            </div>
-
-            <div className="shadowgram-prevention-card liquid-glass">
-              <div className="text-cyan-300">02</div>
-
-              <h3 className="mt-5">
-                Restrict Suspicious Links
-              </h3>
-
-              <p>
-                Candidate coordinated relationships can trigger
-                controlled containment actions.
-              </p>
-            </div>
-
-            <div className="shadowgram-prevention-card liquid-glass">
-              <div className="text-emerald-300">03</div>
-
-              <h3 className="mt-5">
-                Human Review
-              </h3>
-
-              <p>
-                Evidence remains available to an analyst before a
-                consequential action is taken.
-              </p>
-            </div>
-          </div>
-
-          <div className="shadowgram-ethical-note">
-            Future containment can incorporate stronger authentication
-            such as WebAuthn/FIDO2. ShadowGram's prototype framing is
-            intentionally evidence-first and does not identify a person.
-          </div>
-        </div>
-      </section>
-
-      {/* =====================================================
-          LIVE DETECTION DEMO
-      ====================================================== */}
-
-      <section
-        id="live-demo"
-        className="shadowgram-section"
-      >
-        <div className="shadowgram-container">
-          <div className="shadowgram-section-label">
-            LIVE DETECTION DEMO
-          </div>
-
-          <h2 className="shadowgram-section-title">
-            Simulate the shadow.
-          </h2>
-
-          <p className="shadowgram-section-description">
-            The current frontend uses deterministic mock telemetry
-            while the backend implementation is being completed.
-          </p>
-
-          <div className="shadowgram-demo-panel liquid-glass">
-            <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
-              <div>
-                <div className="text-[9px] tracking-[0.18em] text-white/30">
-                  SIMULATION CONTROL
-                </div>
-
-                <h3 className="mt-3 text-lg font-medium">
-                  Behavioral swarm investigation
-                </h3>
-
-                <p className="mt-2 text-xs text-white/40">
-                  Local / Offline Prototype
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-purple-400/15 bg-purple-500/5 px-4 py-3 text-right">
-                <div className="text-[9px] tracking-[0.16em] text-white/30">
-                  CURRENT SCORE
-                </div>
-
-                <div className="mt-1 text-2xl font-semibold text-purple-200">
-                  {detectionScore.toFixed(2)}
-                </div>
-              </div>
-            </div>
-
-            <div className="shadowgram-demo-controls">
-              <button
-                type="button"
-                className="shadowgram-demo-button"
-                onClick={() =>
-                  runDemo('Simulation started')
-                }
-              >
-                Start Simulation
-              </button>
-
-              <button
-                type="button"
-                className="shadowgram-demo-button"
-                onClick={() =>
-                  runDemo('Normal accounts generated')
-                }
-              >
-                Generate Normal Accounts
-              </button>
-
-              <button
-                type="button"
-                className="shadowgram-demo-button"
-                onClick={() =>
-                  runDemo('Coordinated accounts generated')
-                }
-              >
-                Generate Coordinated Accounts
-              </button>
-
-              <button
-                type="button"
-                className="shadowgram-demo-button"
-                onClick={() =>
-                  runDemo('Behavioral graph analysis complete')
-                }
-              >
-                Analyze
-              </button>
-
-              <button
-                type="button"
-                className="shadowgram-demo-button"
-                onClick={() =>
-                  runDemo('Simulation reset')
-                }
-              >
-                Reset
-              </button>
-            </div>
-
-            <div className="shadowgram-demo-status">
-              <span className="shadowgram-demo-status-dot" />
-              {demoStatus}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* =====================================================
-          ARCHITECTURE
-      ====================================================== */}
-
-      <section className="shadowgram-section">
-        <div className="shadowgram-container">
-          <div className="shadowgram-section-label">
-            TECHNICAL ARCHITECTURE
-          </div>
-
-          <h2 className="shadowgram-section-title">
-            A local, explainable detection pipeline.
-          </h2>
-
-          <div className="shadowgram-architecture">
-            <div className="shadowgram-architecture-flow">
-              {architectureSteps.map((step, index) => (
-                <div
-                  key={step}
-                  className="flex items-center gap-2"
-                >
-                  <div className="shadowgram-architecture-node liquid-glass">
-                    {step}
+                  <div className="session-bottom">
+                    <span>{activity}</span>
+                    <b>{scorePercent}%</b>
                   </div>
+                </button>
+              );
+            })}
+          </div>
 
-                  {index < architectureSteps.length - 1 && (
-                    <div className="shadowgram-architecture-arrow">
-                      →
-                    </div>
-                  )}
+          <div className="signal-section">
+            <div className="section-label">SIGNAL CONVERGENCE</div>
+
+            {signals.map((signal) => (
+              <div className="signal-row" key={signal.code}>
+                <div className="signal-label">
+                  <span>{signal.code}</span>
+                  <small>{signal.label}</small>
                 </div>
-              ))}
+
+                <div className="signal-track" role="progressbar" aria-valuenow={signal.value} aria-valuemin={0} aria-valuemax={100}>
+                  <div
+                    className="signal-fill"
+                    style={{ width: `${signal.value}%` }}
+                  />
+                </div>
+
+                <strong>{signal.value}</strong>
+              </div>
+            ))}
+          </div>
+        </aside>
+
+        {/* CENTER GRAPH */}
+        <section className="graph-stage">
+          <div className="graph-header">
+            <div>
+              <span className="eyebrow">02 // NETWORK ANALYSIS</span>
+              <h1>SHADOWGRAPH</h1>
             </div>
 
-            <div className="shadowgram-ethical-note">
-              Local / Offline Prototype · Next.js + React + Tailwind +
-              TypeScript · FastAPI + Python · NetworkX + Louvain ·
-              Sentence Transformers · Isolation Forest · Synthetic Data.
+            <div className="graph-controls" role="group" aria-label="Graph rendering mode">
+              <button
+                type="button"
+                className={activeTab === "3D" ? "active" : ""}
+                onClick={() => setActiveTab("3D")}
+                aria-pressed={activeTab === "3D"}
+                aria-label="Switch to 3D WebGL graph mode"
+              >
+                3D
+              </button>
+
+              <button
+                type="button"
+                className={activeTab === "2D" ? "active" : ""}
+                onClick={() => setActiveTab("2D")}
+                aria-pressed={activeTab === "2D"}
+                aria-label="Switch to 2D Canvas graph mode"
+              >
+                2D
+              </button>
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* =====================================================
-          FINAL PRODUCT FRAMING
-      ====================================================== */}
+          <div className="graph-canvas">
+            <div className="graph-grid" aria-hidden="true" />
 
-      <section className="shadowgram-section">
-        <div className="shadowgram-container">
-          <div className="liquid-glass rounded-3xl p-8 md:p-12">
-            <div className="shadowgram-section-label">
-              ANALYST LANGUAGE
+            <div className="graph-radar radar-one" aria-hidden="true" />
+            <div className="graph-radar radar-two" aria-hidden="true" />
+
+            <GraphCanvas
+              graph={MOCK_GRAPH}
+              selectedSessionId={selectedSessionId}
+              selectedClusterId={selectedCluster.cluster_id}
+              onSelectSession={(sessionId) => setSelectedSessionId(sessionId)}
+              onSelectCluster={(clusterId) => {
+                const matchingNode = MOCK_GRAPH.nodes.find(
+                  (n) => n.cluster_id === clusterId
+                );
+                if (matchingNode) {
+                  setSelectedSessionId(matchingNode.session_id);
+                }
+              }}
+              quarantined={quarantined}
+              mode={activeTab}
+              onFallbackChange={setIs3DFallback}
+            />
+
+            <div className="graph-center-readout" aria-live="polite">
+              <span>COMPOSITE</span>
+              <strong>
+                {selectedCluster.cluster_id === 1 ? "0.92" : selectedCluster.cluster_id === 2 ? "0.20" : "0.67"}
+              </strong>
+              <small>
+                {selectedCluster.cluster_id === 1
+                  ? "HIGH COORDINATION SIGNAL"
+                  : selectedCluster.cluster_id === 2
+                  ? "ORGANIC BEHAVIORAL PATTERN"
+                  : "ANOMALY OUTLIER SIGNAL"}
+              </small>
             </div>
 
-            <h2 className="mt-4 max-w-3xl text-3xl font-semibold tracking-tight md:text-5xl">
-              Behavioral evidence, not identity claims.
-            </h2>
+            <div className="graph-engine">
+              <span>GRAPH ENGINE</span>
+              <strong>
+                {activeTab === "3D"
+                  ? is3DFallback
+                    ? "CANVAS 2D // WEBGL FALLBACK"
+                    : "WEBGL / 3D"
+                  : "CANVAS 2D // HIGH-PERF"}
+              </strong>
+            </div>
 
-            <p className="mt-6 max-w-2xl text-sm leading-8 text-white/45">
-              ShadowGram reports suspicious behavioral relationships,
-              coordination signals, candidate shadow clusters and
-              evidence for analyst review. It does not claim that
-              multiple accounts belong to the same person.
-            </p>
+            <div className="graph-legend">
+              <span>
+                <i className="legend-dot human-dot" aria-hidden="true" />
+                ORGANIC
+              </span>
 
-            <div className="mt-8 flex flex-wrap gap-2">
-              {[
-                'Suspicious behavioral relationship',
-                'Signals consistent with coordinated operation',
-                'Candidate shadow cluster',
-                'Evidence for analyst review',
-                'Behavioral similarity',
-                'Coordination signal',
-                'Anomaly requiring investigation',
-              ].map((label) => (
-                <span
-                  key={label}
-                  className="rounded-full border border-white/10 bg-white/[0.025] px-3 py-2 text-[10px] text-white/45"
-                >
-                  {label}
-                </span>
-              ))}
+              <span>
+                <i className="legend-dot suspect-dot" aria-hidden="true" />
+                SYNDICATE
+              </span>
+
+              <span>
+                <i className="legend-line" aria-hidden="true" />
+                BEHAVIORAL LINK
+              </span>
             </div>
           </div>
-        </div>
+        </section>
+
+        {/* RIGHT EVIDENCE */}
+        <aside className="panel evidence-panel">
+          <div className="panel-heading">
+            <span>03</span>
+
+            <div>
+              <h2>CLUSTER EVIDENCE</h2>
+              <p>WHY ARE THEY LINKED?</p>
+            </div>
+          </div>
+
+          <div className="cluster-card">
+            <div className="cluster-number">
+              #{String(selectedCluster.cluster_id).padStart(2, "0")}
+            </div>
+
+            <div className="cluster-info">
+              <span>ACTIVE CLUSTER</span>
+              <strong>
+                {quarantined && selectedCluster.cluster_id === 1
+                  ? "ISOLATED"
+                  : selectedCluster.cluster_id === 1
+                  ? "UNDER REVIEW"
+                  : "ORGANIC BASELINE"}
+              </strong>
+            </div>
+
+            <div className="cluster-score">
+              <span>
+                {selectedCluster.cluster_id === 1
+                  ? "0.92"
+                  : selectedCluster.cluster_id === 2
+                  ? "0.20"
+                  : "0.67"}
+              </span>
+              <small>SIGNAL</small>
+            </div>
+          </div>
+
+          {/* WHY CARD DOSSIER TRIGGER */}
+          <button
+            type="button"
+            className="why-expand-btn"
+            onClick={() => setIsWhyCardOpen(true)}
+            aria-label="Expand why card dossier dialog"
+          >
+            🔍 EXPAND WHY CARD DOSSIER
+          </button>
+
+          <div className="evidence-list" role="region" aria-label="Behavioral evidence indicators">
+            {evidenceItems.map((item) => (
+              <Evidence
+                key={item.number}
+                number={item.number}
+                title={item.title}
+                description={item.description}
+              />
+            ))}
+          </div>
+
+          {/* DYNAMIC KINETIC SPECTROGRAM */}
+          <KineticSpectrogram intensity={selectedNode.kinetic_jerk_score} />
+        </aside>
       </section>
 
-      {/* =====================================================
-          FOOTER
-      ====================================================== */}
+      {/* BOTTOM COMMAND BAR */}
+      <footer className="command-bar">
+        <div className="command-status">
+          <span className="status-dot" aria-hidden="true" />
 
-      <footer className="shadowgram-footer">
-        <div className="shadowgram-footer-inner">
           <div>
-            <div className="shadowgram-footer-brand">
-              SHADOWGRAM
-            </div>
-
-            <div className="shadowgram-footer-caption">
-              Behavioral Graph Intelligence
-            </div>
-
-            <div className="mt-3 text-[10px] text-white/20">
-              Built for HackAthena 2.0
-            </div>
-          </div>
-
-          <div className="shadowgram-footer-links">
-            <a href="#overview">Overview</a>
-            <a href="#detection">Detection</a>
-            <a href="#shadowgraph">ShadowGraph</a>
-            <a href="#evidence">Evidence</a>
-            <a href="#live-demo">Demo</a>
+            <span>ACTIVE INVESTIGATION</span>
+            <strong>
+              {selectedNode.session_id.toUpperCase()} // CLUSTER #{String(selectedCluster.cluster_id).padStart(2, "0")}
+            </strong>
           </div>
         </div>
+
+        <div className="safety-mode">
+          ANALYST SAFETY MODE
+          <strong>NO PERSON-LEVEL IDENTITY CLAIM</strong>
+        </div>
+
+        <button
+          type="button"
+          className={`quarantine-button ${quarantined ? "locked" : ""}`}
+          onClick={() => setQuarantined((current) => !current)}
+          aria-pressed={quarantined}
+          aria-label={
+            quarantined
+              ? "Cluster 01 isolated. Click to release simulated containment."
+              : "Enforce autonomous swarm quarantine simulation."
+          }
+        >
+          <span aria-hidden="true">{quarantined ? "●" : "⚡"}</span>
+
+          {quarantined
+            ? `CLUSTER #${String(selectedCluster.cluster_id).padStart(2, "0")} ISOLATED (SIMULATION)`
+            : "ENFORCE AUTONOMOUS SWARM QUARANTINE (SIMULATION)"}
+        </button>
       </footer>
+
+      {/* WHY CARD MODAL */}
+      {isWhyCardOpen && (
+        <WhyCardModal
+          cluster={selectedCluster}
+          onClose={() => setIsWhyCardOpen(false)}
+          onQuarantine={() => setQuarantined(true)}
+          isQuarantined={quarantined && selectedCluster.cluster_id === 1}
+        />
+      )}
     </main>
-  )
+  );
+}
+
+function Evidence({
+  number,
+  title,
+  description,
+}: {
+  number: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="evidence-item">
+      <span className="evidence-number">{number}</span>
+
+      <div>
+        <strong>{title}</strong>
+        <p>{description}</p>
+      </div>
+    </div>
+  );
 }

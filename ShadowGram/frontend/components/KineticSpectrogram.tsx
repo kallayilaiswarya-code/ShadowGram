@@ -2,188 +2,173 @@
 
 import { useEffect, useRef } from 'react'
 
-interface KineticSpectrogramProps {
+export interface KineticSpectrogramProps {
   intensity?: number
+  className?: string
 }
 
 export default function KineticSpectrogram({
   intensity = 0.35,
+  className = '',
 }: KineticSpectrogramProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const animFrameRef = useRef<number | null>(null)
+  const phaseRef = useRef<number>(0)
 
   useEffect(() => {
     const canvas = canvasRef.current
-
-    if (!canvas) {
-      return
-    }
+    if (!canvas) return
 
     const context = canvas.getContext('2d')
+    if (!context) return
 
-    if (!context) {
-      return
+    const safeIntensity = Math.max(0.05, Math.min(1, intensity))
+
+    const resizeCanvas = () => {
+      const rect = canvas.getBoundingClientRect()
+      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      canvas.width = Math.max(1, Math.floor(rect.width * dpr))
+      canvas.height = Math.max(1, Math.floor(rect.height * dpr))
+      context.setTransform(dpr, 0, 0, dpr, 0, 0)
     }
 
-    const width = 128
-    const height = 128
-
-    canvas.width = width
-    canvas.height = height
-
-    const safeIntensity = Math.max(
-      0,
-      Math.min(1, intensity)
-    )
-
-    let animationFrame = 0
-    let phase = 0
+    resizeCanvas()
+    const resizeObserver = new ResizeObserver(resizeCanvas)
+    resizeObserver.observe(canvas)
 
     const draw = () => {
-      phase += 0.035 + safeIntensity * 0.025
-
-      context.clearRect(0, 0, width, height)
-
-      /*
-       * Background
-       */
-      context.fillStyle = '#05020d'
-      context.fillRect(0, 0, width, height)
-
-      /*
-       * Spectrogram bars
-       *
-       * The signal amplitude is influenced by the selected
-       * cluster's kinetic jerk score.
-       */
-      for (let x = 0; x < width; x += 2) {
-        const primaryWave =
-          Math.sin(x * 0.16 + phase) * 0.5
-
-        const secondaryWave =
-          Math.sin(x * 0.05 - phase * 0.7) * 0.3
-
-        const kineticWave =
-          Math.sin(
-            x * 0.31 +
-              phase * (1.4 + safeIntensity)
-          ) *
-          0.2 *
-          safeIntensity
-
-        const wave =
-          primaryWave +
-          secondaryWave +
-          kineticWave
-
-        const normalized = Math.max(
-          0,
-          Math.min(1, (wave + 1) / 2)
-        )
-
-        const baseHeight = 8
-
-        const dynamicHeight =
-          normalized *
-          48 *
-          (0.45 + safeIntensity * 0.55)
-
-        const barHeight =
-          baseHeight + dynamicHeight
-
-        const y = height - barHeight
-
-        const opacity =
-          0.15 +
-          normalized *
-            (0.35 + safeIntensity * 0.3)
-
-        context.fillStyle = `rgba(124, 140, 255, ${opacity})`
-
-        context.fillRect(
-          x,
-          y,
-          1,
-          barHeight
-        )
+      const rect = canvas.getBoundingClientRect()
+      if (rect.width <= 0 || rect.height <= 0) {
+        animFrameRef.current = requestAnimationFrame(draw)
+        return
       }
 
-      /*
-       * Signal baseline
-       */
-      context.strokeStyle =
-        'rgba(255,255,255,0.12)'
+      phaseRef.current += 0.035 + safeIntensity * 0.035
 
+      context.clearRect(0, 0, rect.width, rect.height)
+
+      // Background
+      context.fillStyle = 'rgba(3, 10, 17, 0.95)'
+      context.fillRect(0, 0, rect.width, rect.height)
+
+      // Subtle horizontal analysis grid
+      context.strokeStyle = 'rgba(21, 188, 223, 0.09)'
       context.lineWidth = 1
-
-      context.beginPath()
-      context.moveTo(0, height - 8)
-      context.lineTo(width, height - 8)
-      context.stroke()
-
-      /*
-       * Horizontal analysis grid
-       */
-      context.strokeStyle =
-        'rgba(255,255,255,0.07)'
-
-      for (let y = 0; y < height; y += 16) {
+      for (let y = 8; y < rect.height; y += 14) {
         context.beginPath()
         context.moveTo(0, y)
-        context.lineTo(width, y)
+        context.lineTo(rect.width, y)
         context.stroke()
       }
 
-      /*
-       * Intensity indicator
-       */
-      const indicatorHeight =
-        safeIntensity * height
+      // Draw frequency spectrum bars
+      const barWidth = 3
+      const gap = 2
+      const step = barWidth + gap
+      const numBars = Math.floor(rect.width / step)
 
-      context.fillStyle =
-        'rgba(255,255,255,0.08)'
+      for (let i = 0; i < numBars; i++) {
+        const x = i * step
+        const norm = i / Math.max(numBars, 1)
 
-      context.fillRect(
-        width - 3,
-        height - indicatorHeight,
-        2,
-        indicatorHeight
-      )
+        // Triple harmonic simulation: trajectory jerk + keystroke flight + dwell time
+        const w1 = Math.sin(norm * 14.0 + phaseRef.current) * 0.45
+        const w2 = Math.sin(norm * 7.0 - phaseRef.current * 0.7) * 0.3
+        const w3 =
+          Math.sin(norm * 28.0 + phaseRef.current * (1.3 + safeIntensity * 1.6)) *
+          0.25 *
+          safeIntensity
 
-      animationFrame =
-        window.requestAnimationFrame(draw)
+        const combined = Math.max(0, Math.min(1, (w1 + w2 + w3 + 1) / 2))
+        const dynamicH =
+          combined * (rect.height - 10) * (0.35 + safeIntensity * 0.65)
+        const barHeight = Math.max(3, dynamicH)
+        const y = rect.height - barHeight - 2
+
+        // Dynamic tactical coloring based on intensity tier
+        if (safeIntensity > 0.75) {
+          // High jerk / robotic automation: Crimson red
+          context.fillStyle = `rgba(239, 68, 68, ${0.45 + combined * 0.5})`
+        } else if (safeIntensity > 0.4) {
+          // Intermediate / outlier: Amber
+          context.fillStyle = `rgba(245, 158, 11, ${0.4 + combined * 0.5})`
+        } else {
+          // Organic human baseline: Tactical cyan
+          context.fillStyle = `rgba(21, 188, 223, ${0.35 + combined * 0.55})`
+        }
+
+        context.fillRect(x, y, barWidth, barHeight)
+      }
+
+      // Baseline line
+      context.strokeStyle =
+        safeIntensity > 0.75
+          ? 'rgba(239, 68, 68, 0.4)'
+          : 'rgba(21, 188, 223, 0.35)'
+      context.beginPath()
+      context.moveTo(0, rect.height - 1)
+      context.lineTo(rect.width, rect.height - 1)
+      context.stroke()
+
+      animFrameRef.current = requestAnimationFrame(draw)
     }
 
     draw()
 
     return () => {
-      window.cancelAnimationFrame(animationFrame)
+      resizeObserver.disconnect()
+      if (animFrameRef.current !== null) {
+        cancelAnimationFrame(animFrameRef.current)
+      }
     }
   }, [intensity])
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-      <div className="mb-3">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-xs tracking-[0.2em] text-purple-300">
-            KINETIC SPECTROGRAM
-          </span>
-
-          <span className="text-[10px] text-white/30">
-            {Math.round(intensity * 100)}%
-          </span>
-        </div>
-
-        <p className="mt-1 text-xs text-white/40">
-          Live behavioral motion signal
-        </p>
+    <div className={`spectrogram ${className}`}>
+      <div className="spectrogram-header">
+        <span>KINETIC SPECTROGRAM // MOTION SIGNATURE</span>
+        <strong
+          style={{
+            color:
+              intensity > 0.75
+                ? 'var(--red)'
+                : intensity > 0.4
+                ? '#f59e0b'
+                : 'var(--cyan)',
+          }}
+        >
+          {Math.round(intensity * 100)}%
+        </strong>
       </div>
 
-      <div className="flex justify-center">
+      <div
+        className="spectrogram-canvas-shell"
+        style={{
+          position: 'relative',
+          width: '100%',
+          height: '56px',
+          marginTop: '8px',
+          borderBottom: '1px solid rgba(21, 188, 223, 0.2)',
+        }}
+      >
         <canvas
           ref={canvasRef}
-          className="h-32 w-32 rounded-lg border border-white/10"
-          aria-label="Kinetic behavioral spectrogram"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            display: 'block',
+          }}
+          aria-label="Kinetic behavioral motion spectrogram"
         />
+      </div>
+
+      <div className="spectrogram-labels">
+        <span>POINTER (JERK)</span>
+        <span>TYPING (Δt)</span>
+        <span>DWELL</span>
+        <span>FLIGHT</span>
       </div>
     </div>
   )
