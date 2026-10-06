@@ -290,7 +290,7 @@
       const aId = (window.ShadowGramTelemetry && window.ShadowGramTelemetry.accountId) || 'ACC-JUDGE-01';
 
       try {
-        const resp = await fetch('http://localhost:8000/api/step-up/verify', {
+        const resp = await fetch('/api/step-up/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
