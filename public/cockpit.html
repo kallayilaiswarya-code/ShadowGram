@@ -18,6 +18,23 @@
     .stat-val-red { color: #f87171; font-weight: bold; }
     .stat-val-gold { color: #fbbf24; font-weight: bold; }
 
+    /* Sensitivity Slider Control */
+    .sensitivity-control { display: flex; align-items: center; gap: 0.5rem; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(6, 182, 212, 0.35); border-radius: 0.45rem; padding: 0.25rem 0.65rem; font-family: monospace; font-size: 0.8rem; box-shadow: 0 0 10px rgba(6, 182, 212, 0.1); }
+    .sensitivity-label { color: #38bdf8; font-weight: 600; display: flex; align-items: center; gap: 0.3rem; white-space: nowrap; }
+    .sensitivity-slider { -webkit-appearance: none; appearance: none; width: 100px; height: 4px; border-radius: 2px; background: #1e293b; outline: none; cursor: pointer; transition: 0.15s; }
+    .sensitivity-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #06b6d4; box-shadow: 0 0 8px #06b6d4; cursor: pointer; }
+    .sensitivity-slider::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: #06b6d4; border: none; box-shadow: 0 0 8px #06b6d4; cursor: pointer; }
+    .sensitivity-val { color: #34d399; font-weight: bold; min-width: 32px; text-align: right; }
+    .sensitivity-hint { font-size: 0.65rem; color: #94a3b8; font-family: sans-serif; }
+
+    /* Audio Toggle Control */
+    .audio-btn { background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(6, 182, 212, 0.35); border-radius: 0.45rem; padding: 0.25rem 0.65rem; font-family: monospace; font-size: 0.8rem; color: #38bdf8; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; transition: 0.15s; }
+    .audio-btn:hover { background: rgba(30, 41, 59, 0.9); border-color: rgba(6, 182, 212, 0.6); }
+    .audio-btn.muted { border-color: rgba(239, 68, 68, 0.4); color: #94a3b8; }
+    .audio-state { font-weight: bold; }
+    .audio-state.on { color: #34d399; }
+    .audio-state.off { color: #ef4444; }
+
     /* Main Grid */
     .cockpit-grid { flex: 1; display: grid; grid-template-columns: 1fr 340px; height: calc(100vh - 56px); position: relative; }
     #canvas-container { width: 100%; height: 100%; position: relative; background: radial-gradient(circle at 40% 50%, #0a0f24 0%, #030712 80%); }
@@ -59,6 +76,17 @@
       <span style="font-size:0.65rem; background:#1e293b; color:#94a3b8; padding:0.2rem 0.5rem; border-radius:0.3rem; margin-left:0.5rem;">STATION 2 COMMAND</span>
     </div>
     <div class="nav-stats">
+      <!-- Audio Alerts Toggle Control -->
+      <button id="btn-audio-toggle" class="audio-btn" onclick="toggleAudioAlerts()" title="Toggle Web Audio cyber alerts and standby radar">
+        <span id="audio-icon">🔊</span> Audio Alerts: <span id="audio-state-text" class="audio-state on">ON</span>
+      </button>
+
+      <!-- Detection Sensitivity Slider Control -->
+      <div class="sensitivity-control" title="Demo sensitivity controls visible graph connectivity.">
+        <label for="sensitivity-slider" class="sensitivity-label">🎯 Detection Sensitivity θ:</label>
+        <input type="range" id="sensitivity-slider" class="sensitivity-slider" min="0.50" max="0.90" step="0.01" value="0.70" oninput="onSensitivityChange(this.value)">
+        <span id="sensitivity-val" class="sensitivity-val">0.70</span>
+      </div>
       <div class="stat-pill">Nodes: <span id="stat-nodes" class="stat-val-green">100</span></div>
       <div class="stat-pill">Modularity Q: <span id="stat-q" class="stat-val-gold">0.7241</span></div>
       <div class="stat-pill">Null Permutation: <span id="stat-p" class="stat-val-red">p &lt; 0.001</span></div>
@@ -200,6 +228,211 @@
     window.addEventListener('resize', resize);
     resize();
 
+    // Client-side detection sensitivity state (Default: 0.70)
+    let detectionSensitivity = 0.70;
+
+    // =========================================================================
+    // TACTICAL PROCEDURAL WEB AUDIO ENGINE (CyberAudioEngine)
+    // Conforms strictly to ROLE_2_FRONTEND_3D_COMMAND_CENTER_AISWARYA.md
+    // Zero external audio assets (MP3/WAV/CDN). Native W3C AudioContext.
+    // =========================================================================
+    let audioCtx = null;
+    let audioAlertsEnabled = true;
+    let standbyRadarInterval = null;
+    let activeSirenOscs = [];
+
+    function initOrResumeAudioContext() {
+      if (!audioAlertsEnabled) return null;
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          audioCtx = new AudioContextClass();
+        }
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      }
+      // Start standby radar if enabled and not already running
+      startStandbyRadar();
+      return audioCtx;
+    }
+
+    function toggleAudioAlerts() {
+      audioAlertsEnabled = !audioAlertsEnabled;
+      const btn = document.getElementById('btn-audio-toggle');
+      const icon = document.getElementById('audio-icon');
+      const text = document.getElementById('audio-state-text');
+      if (audioAlertsEnabled) {
+        btn.classList.remove('muted');
+        icon.textContent = '🔊';
+        text.textContent = 'ON';
+        text.className = 'audio-state on';
+        initOrResumeAudioContext();
+      } else {
+        btn.classList.add('muted');
+        icon.textContent = '🔇';
+        text.textContent = 'OFF';
+        text.className = 'audio-state off';
+        stopAllAudio();
+      }
+    }
+
+    function stopAllAudio() {
+      if (standbyRadarInterval) {
+        clearInterval(standbyRadarInterval);
+        standbyRadarInterval = null;
+      }
+      // Stop and clean up any ongoing siren/klaxon oscillators
+      for (let osc of activeSirenOscs) {
+        try {
+          osc.stop();
+          osc.disconnect();
+        } catch (e) {}
+      }
+      activeSirenOscs = [];
+    }
+
+    // Specification Implementation: Procedural SFX from Role 2 Guide
+    function playProceduralSFX(type) {
+      if (!audioAlertsEnabled) return;
+      const ctx = initOrResumeAudioContext();
+      if (!ctx || ctx.state !== 'running') return;
+
+      const now = ctx.currentTime;
+      const master = ctx.createGain();
+      master.connect(ctx.destination);
+
+      if (type === 'subbass') {
+        // Cinematic Sub-Bass Drop (120 Hz -> 30 Hz logarithmic decay)
+        const osc = ctx.createOscillator();
+        osc.frequency.setValueAtTime(120, now);
+        osc.frequency.exponentialRampToValueAtTime(30, now + 1.2);
+        master.gain.setValueAtTime(0.9, now);
+        master.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+        osc.connect(master);
+        osc.start(now);
+        osc.stop(now + 1.2);
+      } else if (type === 'glitch') {
+        // Cyber-Glitch Telemetry Chirp (Chowning FM modulation at 2400 Hz -> 800 Hz)
+        const carrier = ctx.createOscillator();
+        const mod = ctx.createOscillator();
+        const modGain = ctx.createGain();
+        carrier.frequency.setValueAtTime(2400, now);
+        carrier.frequency.linearRampToValueAtTime(800, now + 0.025);
+        mod.frequency.setValueAtTime(850, now);
+        modGain.gain.setValueAtTime(1200, now);
+        mod.connect(modGain);
+        modGain.connect(carrier.frequency);
+        master.gain.setValueAtTime(0.7, now);
+        master.gain.exponentialRampToValueAtTime(0.001, now + 0.025);
+        carrier.connect(master);
+        mod.start(now);
+        carrier.start(now);
+        mod.stop(now + 0.025);
+        carrier.stop(now + 0.025);
+      }
+    }
+
+    // Standby Radar Ping: Subtle, low-gain procedural periodic pulse
+    function playStandbyRadarPing() {
+      if (!audioAlertsEnabled) return;
+      if (!audioCtx || audioCtx.state !== 'running') return;
+
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.exponentialRampToValueAtTime(440, now + 0.08);
+
+      // Kept very quiet and short
+      gain.gain.setValueAtTime(0.04, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.08);
+    }
+
+    function startStandbyRadar() {
+      if (!audioAlertsEnabled) return;
+      if (standbyRadarInterval) return; // Prevent multiple timers
+      standbyRadarInterval = setInterval(() => {
+        playStandbyRadarPing();
+      }, 5000); // Gentle 5-second interval
+    }
+
+    // Tactical Red-Alert Klaxon for Q >= 0.60 Swarm Detection
+    let lastKlaxonTime = 0;
+    function triggerSwarmAttackKlaxon() {
+      if (!audioAlertsEnabled) return;
+      const ctx = initOrResumeAudioContext();
+      if (!ctx || ctx.state !== 'running') return;
+
+      // Rate limit to prevent infinite overlapping sirens (minimum 2s cooldown)
+      const now = ctx.currentTime;
+      if (now - lastKlaxonTime < 2.0) return;
+      lastKlaxonTime = now;
+
+      // Play specification subbass drop
+      playProceduralSFX('subbass');
+
+      // Controlled dual-tone tactical alert klaxon (800ms)
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc1.type = 'sawtooth';
+      osc2.type = 'square';
+      osc1.frequency.setValueAtTime(740, now);
+      osc1.frequency.linearRampToValueAtTime(520, now + 0.4);
+      osc1.frequency.linearRampToValueAtTime(740, now + 0.8);
+
+      osc2.frequency.setValueAtTime(370, now);
+      osc2.frequency.linearRampToValueAtTime(260, now + 0.4);
+      osc2.frequency.linearRampToValueAtTime(370, now + 0.8);
+
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+
+      activeSirenOscs.push(osc1, osc2);
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + 0.8);
+      osc2.stop(now + 0.8);
+
+      setTimeout(() => {
+        activeSirenOscs = activeSirenOscs.filter(o => o !== osc1 && o !== osc2);
+      }, 850);
+    }
+
+    // CLIENT-SIDE DEMO VISUAL FILTER — not backend behavioral similarity.
+    // Handles dynamic HUD slider changes smoothly without reloading or tearing down the graph.
+    function onSensitivityChange(val) {
+      initOrResumeAudioContext();
+      detectionSensitivity = parseFloat(val);
+      const valDisplay = document.getElementById('sensitivity-val');
+      if (valDisplay) {
+        valDisplay.textContent = detectionSensitivity.toFixed(2);
+      }
+      // Trigger future backend integration hook if available
+      requestRepartitionFromBackend(detectionSensitivity);
+    }
+
+    // Future backend integration hook for dynamic community repartitioning:
+    // When Pete's backend exposes POST /api/repartition?threshold=<val>, connect here.
+    async function requestRepartitionFromBackend(threshold) {
+      // Future integration point for:
+      // POST /api/repartition?threshold=<VALUE>
+      // Currently inactive as backend does not expose this endpoint.
+    }
+
     // Generate initial graph
     function initMockNodes() {
       nodes = [];
@@ -235,11 +468,19 @@
           radius: 5
         });
       }
-      // Dense red links between bots
+      // Dense red links between bots with deterministic visualization weights
+      // NOTE: CLIENT-SIDE DEMO VISUAL FILTER — not backend behavioral similarity.
       for (let a = 0; a < botIndices.length; a++) {
         for (let b = a + 1; b < botIndices.length; b++) {
-          if (Math.random() > 0.4) {
-            links.push({ source: botIndices[a], target: botIndices[b] });
+          if (Math.random() > 0.3) {
+            // Deterministic pseudo-strength between 0.50 and 0.90 based on fixed pair index hash
+            const hash = Math.sin((a + 1) * 9301 + (b + 1) * 49297) * 10000;
+            const deterministicWeight = 0.50 + (Math.abs(hash - Math.floor(hash)) * 0.40);
+            links.push({
+              source: botIndices[a],
+              target: botIndices[b],
+              weight: parseFloat(deterministicWeight.toFixed(4))
+            });
           }
         }
       }
@@ -249,10 +490,14 @@
     function animate() {
       ctx.clearRect(0, 0, width, height);
 
-      // Draw red laser links
+      // Draw red laser links (filtered by client-side sensitivity)
       ctx.lineWidth = 1.2;
       ctx.strokeStyle = 'rgba(239, 68, 68, 0.45)';
       for (let l of links) {
+        // CLIENT-SIDE DEMO VISUAL FILTER: Render only edges whose weight meets or exceeds sensitivity
+        if (l.weight < detectionSensitivity) {
+          continue;
+        }
         const s = nodes[l.source];
         const t = nodes[l.target];
         if (s && t) {
@@ -285,18 +530,28 @@
 
     // API triggers
     async function deploySimulation() {
+      initOrResumeAudioContext();
       try {
         const resp = await fetch('http://localhost:8000/api/simulate_swarm', { method: 'POST' });
         const data = await resp.json();
-        document.getElementById('stat-q').textContent = (data.modularity_q || 0.7241).toFixed(4);
+        const qVal = data.modularity_q !== undefined ? data.modularity_q : 0.7241;
+        document.getElementById('stat-q').textContent = qVal.toFixed(4);
         initMockNodes();
+        // Check Q >= 0.60 threshold condition
+        if (qVal >= 0.60) {
+          triggerSwarmAttackKlaxon();
+        }
       } catch (e) {
         console.warn('Simulation trigger:', e);
         initMockNodes();
+        // In local mode default Q is 0.7241 >= 0.60
+        triggerSwarmAttackKlaxon();
       }
     }
 
     async function triggerQuarantine() {
+      initOrResumeAudioContext();
+      playProceduralSFX('glitch'); // Cyber chirp/glitch on quarantine execution
       try {
         const resp = await fetch('http://localhost:8000/api/quarantine', {
           method: 'POST',
@@ -318,15 +573,18 @@
     }
 
     function resetGraph() {
+      initOrResumeAudioContext();
       fetch('http://localhost:8000/api/reset', { method: 'POST' }).catch(() => {});
       initMockNodes();
     }
 
     function exportSarPdf() {
+      initOrResumeAudioContext();
       window.open('http://localhost:8000/api/sar/pdf/1', '_blank');
     }
 
     function openWhyCard() {
+      initOrResumeAudioContext();
       document.getElementById('whyCardModal').style.display = 'flex';
     }
 
@@ -340,7 +598,13 @@
       ws.onmessage = function(ev) {
         const msg = JSON.parse(ev.data);
         if (msg.type === 'QUARANTINE_TRIGGERED') {
+          playProceduralSFX('glitch'); // Cyber chirp on incoming quarantine signal
           for (let n of nodes) if (n.type === 'bot') n.color = '#f59e0b';
+        } else if (msg.type === 'SWARM_SIMULATION_DEPLOYED') {
+          const qVal = msg.modularity_q !== undefined ? msg.modularity_q : 0.7241;
+          if (qVal >= 0.60) {
+            triggerSwarmAttackKlaxon();
+          }
         }
       };
     } catch (e) {}

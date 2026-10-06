@@ -26,7 +26,20 @@
     .footer { margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid #1f2937; font-size: 0.7rem; color: #6b7280; display: flex; justify-content: space-between; }
     .success-box { text-align: center; padding: 1.5rem 0; display: none; }
     .checkmark { width: 48px; height: 48px; border-radius: 50%; background: rgba(16, 185, 129, 0.2); border: 2px solid #10b981; color: #10b981; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; }
-  </style>
+
+    /* Account Aggregator Sandbox Demo Styles */
+    .btn-stepup-link { background: none; border: 1px dashed #f59e0b; color: #fbbf24; font-size: 0.7rem; padding: 0.35rem 0.65rem; border-radius: 0.35rem; cursor: pointer; transition: 0.15s; }
+    .btn-stepup-link:hover { background: rgba(245, 158, 11, 0.1); border-color: #fbbf24; }
+    .btn-aa-link { background: none; border: 1px dashed #06b6d4; color: #38bdf8; font-size: 0.7rem; padding: 0.35rem 0.65rem; border-radius: 0.35rem; cursor: pointer; transition: 0.15s; }
+    .btn-aa-link:hover { background: rgba(6, 182, 212, 0.1); border-color: #38bdf8; }
+    .sandbox-tag { display: inline-block; font-size: 0.6rem; font-family: monospace; font-weight: 700; background: rgba(6, 182, 212, 0.15); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.3); padding: 0.1rem 0.4rem; border-radius: 0.25rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    .provider-option { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: #1e293b; border: 1px solid #334155; border-radius: 0.5rem; cursor: pointer; font-size: 0.8rem; color: #e2e8f0; transition: 0.15s; }
+    .provider-option:hover, .provider-option.selected { border-color: #06b6d4; background: rgba(6, 182, 212, 0.1); }
+    .consent-box { background: #1e293b; border-radius: 0.5rem; padding: 0.75rem; font-size: 0.75rem; color: #cbd5e1; text-align: left; margin: 0.75rem 0; border: 1px solid #334155; }
+    .consent-checkbox-label { display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.72rem; color: #94a3b8; cursor: pointer; margin-top: 0.5rem; text-align: left; }
+    .aa-step-title { font-size: 0.75rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; margin-bottom: 0.35rem; text-align: left; }
+    .demo-data-card { background: #111827; border: 1px solid #1f2937; border-radius: 0.4rem; padding: 0.5rem; font-family: monospace; font-size: 0.7rem; color: #94a3b8; text-align: left; margin-bottom: 0.6rem; }
+    .progress-line { font-family: monospace; font-size: 0.75rem; color: #38bdf8; margin: 0.5rem 0; min-height: 18px; }
 </head>
 <body>
 
@@ -83,15 +96,18 @@
         &gt;&gt; APPLY NOW (INSTANT DISBURSAL) &lt;&lt;
       </button>
 
-      <div style="margin-top: 0.75rem; text-align: center;">
-        <button type="button" onclick="triggerStepUpDemo()" style="background: none; border: 1px dashed #f59e0b; color: #fbbf24; font-size: 0.7rem; padding: 0.35rem 0.65rem; border-radius: 0.35rem; cursor: pointer;">
-          ⚖️ Test Safeguard: Trigger 1-Rupee Step-Up Challenge
+      <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+        <button type="button" onclick="triggerStepUpDemo()" class="btn-stepup-link">
+          ⚖️ Safeguard: 1-Rupee UPI Step-Up
+        </button>
+        <button type="button" onclick="openAAModal()" class="btn-aa-link">
+          🏦 Verify via Account Aggregator <span class="sandbox-tag">DEMO</span>
         </button>
       </div>
     </form>
 
     <!-- Step-Up Challenge Modal (Zero Permanent Bans Safeguard) -->
-    <div id="stepup-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); z-index:9999; display:none; align-items:center; justify-content:center; padding:1rem;">
+    <div id="stepup-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); z-index:9999; align-items:center; justify-content:center; padding:1rem;">
       <div style="background:#0f172a; border:2px solid #f59e0b; border-radius:1rem; max-width:400px; width:100%; padding:1.5rem; text-align:center; box-shadow:0 0 30px rgba(245,158,11,0.25);">
         <div style="font-size:2rem; margin-bottom:0.5rem;">🛡️</div>
         <h3 style="color:#fbbf24; font-size:1.1rem; font-weight:700; margin-bottom:0.5rem;">Frictionless Step-Up Verification</h3>
@@ -99,7 +115,7 @@
           Temporary quarantine challenge triggered pursuant to RBI fraud prevention guidelines. 
           Real humans clear this in under 10 seconds via a <strong>₹1 UPI Penny-Drop</strong> or Account Aggregator consent.
         </p>
-        <div style="background:#1e293b; border-radius:0.5rem; padding:0.75rem; font-family:monospace; font-size:0.75rem; color:#cbd5e1; text-align:left; margin-bottom:1.25rem;">
+        <div style="background:#1e293b; border-radius:0.5rem; padding:0.75rem; font-family:monospace; font-size:0.75rem; color:#cbd5e1; text-align:left; margin-bottom:1rem;">
           <div>Syndicate Blast-Radius: <span style="color:#f87171;">ISOLATED</span></div>
           <div>Fee-Bearing KYC APIs: <span style="color:#34d399;">HALTED (₹61 SAVED)</span></div>
           <div>Step-Up Challenge: <span style="color:#fbbf24;">UPI PENNY-DROP PENDING</span></div>
@@ -107,7 +123,97 @@
         <button id="btn-verify-upi" onclick="executePennyDrop()" style="width:100%; padding:0.75rem; background:linear-gradient(90deg, #f59e0b, #d97706); border:none; border-radius:0.5rem; color:#000; font-weight:bold; font-size:0.85rem; cursor:pointer; margin-bottom:0.5rem;">
           VERIFY VIA 1-RUPEE UPI PENNY DROP (&lt;10s)
         </button>
+        <div style="margin-bottom:0.5rem;">
+          <button type="button" onclick="closeStepUpModal(); openAAModal();" style="background:none; border:none; color:#38bdf8; font-size:0.75rem; text-decoration:underline; cursor:pointer;">
+            Or verify via Account Aggregator (Setu / OneMoney DEMO)
+          </button>
+        </div>
         <button onclick="closeStepUpModal()" style="background:none; border:none; color:#64748b; font-size:0.75rem; cursor:pointer;">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Account Aggregator Sandbox Demo Modal -->
+    <div id="aa-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); z-index:9999; align-items:center; justify-content:center; padding:1rem;">
+      <div style="background:#0f172a; border:2px solid #06b6d4; border-radius:1rem; max-width:440px; width:100%; padding:1.5rem; text-align:center; box-shadow:0 0 30px rgba(6,182,212,0.25); position:relative;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; border-bottom:1px solid #1e293b; padding-bottom:0.5rem;">
+          <div style="display:flex; align-items:center; gap:0.4rem;">
+            <span style="font-size:1.2rem;">🏦</span>
+            <strong style="color:#fff; font-size:0.95rem;">Account Aggregator Verification</strong>
+          </div>
+          <span class="sandbox-tag">DEMO / SANDBOX</span>
+        </div>
+
+        <!-- AA Modal Content Body -->
+        <div id="aa-body-content">
+          <p style="color:#94a3b8; font-size:0.75rem; line-height:1.4; margin-bottom:0.75rem; text-align:left;">
+            Simulate instant financial identity clearance via RBI-regulated Account Aggregator rails. No real credentials or live APIs used.
+          </p>
+
+          <!-- Step 1: Provider Selection -->
+          <div style="margin-bottom:0.75rem;">
+            <div class="aa-step-title">Step 1: Select Account Aggregator (Simulated)</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+              <div id="provider-setu" class="provider-option selected" onclick="selectAAProvider('Setu')">
+                <input type="radio" name="aa_provider" id="radio-setu" checked>
+                <label for="radio-setu" style="cursor:pointer; font-weight:600;">Setu (Demo)</label>
+              </div>
+              <div id="provider-onemoney" class="provider-option" onclick="selectAAProvider('OneMoney')">
+                <input type="radio" name="aa_provider" id="radio-onemoney">
+                <label for="radio-onemoney" style="cursor:pointer; font-weight:600;">OneMoney (Demo)</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2: Information to Share -->
+          <div style="margin-bottom:0.75rem;">
+            <div class="aa-step-title">Step 2: Consented Data Scope (Simulated)</div>
+            <div class="demo-data-card">
+              <div>Institution: <span style="color:#38bdf8;">Athena Demo Bank</span> <span class="sandbox-tag" style="font-size:0.55rem;">DEMO DATA</span></div>
+              <div>Account: <span style="color:#cbd5e1;">XXXX XXXX 4821 (Savings)</span></div>
+              <div>Period: <span style="color:#cbd5e1;">01 Sep 2026 – 30 Sep 2026</span></div>
+              <div style="margin-top:0.35rem; display:flex; gap:0.6rem; color:#e2e8f0; font-size:0.68rem;">
+                <label style="display:flex; align-items:center; gap:0.25rem;"><input type="checkbox" checked disabled> Recent Bank Statement</label>
+                <label style="display:flex; align-items:center; gap:0.25rem;"><input type="checkbox" checked disabled> Account Verification</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3: Consent Explanation -->
+          <div class="consent-box">
+            <div style="font-weight:700; color:#38bdf8; margin-bottom:0.25rem; font-size:0.75rem;">Consent Explanation</div>
+            <p style="margin:0; font-size:0.7rem; color:#cbd5e1; line-height:1.3;">
+              By continuing, you authorize this <strong>DEMO environment</strong> to simulate retrieval of consented financial information for instant step-up de-quarantine.
+            </p>
+            <label class="consent-checkbox-label">
+              <input type="checkbox" id="aa-consent-checkbox" onchange="onConsentToggled()">
+              <span>I give consent to retrieve simulated financial statement data (Required)</span>
+            </label>
+          </div>
+
+          <div id="aa-validation-msg" style="color:#ef4444; font-size:0.72rem; min-height:16px; margin-bottom:0.5rem; text-align:left;"></div>
+
+          <!-- Action Buttons -->
+          <button id="btn-verify-aa" onclick="executeAAVerification()" style="width:100%; padding:0.75rem; background:linear-gradient(90deg, #06b6d4, #2563eb); border:none; border-radius:0.5rem; color:#000; font-weight:bold; font-size:0.85rem; cursor:pointer; margin-bottom:0.5rem; letter-spacing:0.03em;">
+            VERIFY VIA ACCOUNT AGGREGATOR (DEMO)
+          </button>
+          <button onclick="closeAAModal()" style="background:none; border:none; color:#64748b; font-size:0.75rem; cursor:pointer;">Cancel</button>
+        </div>
+
+        <!-- Simulated Retrieval Progress / Success Container -->
+        <div id="aa-progress-content" style="display:none; padding:1rem 0;">
+          <div style="font-size:2rem; margin-bottom:0.5rem;" id="aa-progress-icon">⏳</div>
+          <h4 id="aa-progress-title" style="color:#38bdf8; font-size:0.95rem; margin-bottom:0.5rem;">Requesting consent...</h4>
+          <div class="progress-line" id="aa-progress-detail">Contacting simulated provider...</div>
+          <div id="aa-success-summary" style="display:none; background:#1e293b; border-radius:0.5rem; padding:0.75rem; font-family:monospace; font-size:0.72rem; color:#cbd5e1; text-align:left; margin:0.75rem 0;">
+            <div>Provider: <span id="aa-provider-name-display" style="color:#38bdf8;">Setu</span> (Demo)</div>
+            <div>Consent: <span style="color:#10b981;">GRANTED</span></div>
+            <div>Statement Retrieval: <span style="color:#10b981;">SIMULATED SUCCESS</span></div>
+            <div>Verification Status: <span style="color:#34d399; font-weight:bold;">VERIFIED</span></div>
+          </div>
+          <button id="btn-aa-finish" onclick="completeAAVerification()" style="display:none; width:100%; padding:0.75rem; background:linear-gradient(90deg, #10b981, #059669); border:none; border-radius:0.5rem; color:#000; font-weight:bold; font-size:0.85rem; cursor:pointer; margin-top:0.5rem;">
+            CONTINUE TO APPROVED LOAN &gt;&gt;
+          </button>
+        </div>
       </div>
     </div>
 
@@ -158,6 +264,23 @@
       stepupModal.style.display = 'none';
     }
 
+    // Common Verification Success Pathway (Shared by UPI Penny Drop & Account Aggregator Demo)
+    function onVerificationCleared(methodName) {
+      form.style.display = 'none';
+      successBox.style.display = 'block';
+      const badge = document.getElementById('stepup-badge');
+      if (badge) {
+        if (methodName === 'Account Aggregator') {
+          badge.textContent = 'Safeguard: Account Aggregator Verified (DEMO Sandbox Cleared)';
+          badge.style.color = '#38bdf8';
+        } else {
+          badge.textContent = 'Safeguard: Step-Up UPI Verified (100% Cleared)';
+          badge.style.color = '#fbbf24';
+        }
+        badge.style.display = 'block';
+      }
+    }
+
     async function executePennyDrop() {
       const btn = document.getElementById('btn-verify-upi');
       btn.textContent = 'Verifying UPI Micro-Deposit...';
@@ -185,10 +308,99 @@
 
       setTimeout(() => {
         closeStepUpModal();
-        form.style.display = 'none';
-        successBox.style.display = 'block';
-        document.getElementById('stepup-badge').style.display = 'block';
+        onVerificationCleared('UPI Penny Drop');
       }, 600);
+    }
+
+    // Account Aggregator Sandbox Demo State & Handlers
+    const aaModal = document.getElementById('aa-modal');
+    let selectedAAProvider = 'Setu';
+
+    function openAAModal() {
+      aaModal.style.display = 'flex';
+      // Reset modal state
+      document.getElementById('aa-body-content').style.display = 'block';
+      document.getElementById('aa-progress-content').style.display = 'none';
+      document.getElementById('aa-consent-checkbox').checked = false;
+      document.getElementById('aa-validation-msg').textContent = '';
+      document.getElementById('btn-verify-aa').disabled = false;
+      document.getElementById('btn-verify-aa').style.opacity = '1';
+    }
+
+    function closeAAModal() {
+      aaModal.style.display = 'none';
+    }
+
+    function selectAAProvider(providerName) {
+      selectedAAProvider = providerName;
+      const setuBox = document.getElementById('provider-setu');
+      const onemoneyBox = document.getElementById('provider-onemoney');
+      const radioSetu = document.getElementById('radio-setu');
+      const radioOnemoney = document.getElementById('radio-onemoney');
+
+      if (providerName === 'Setu') {
+        setuBox.classList.add('selected');
+        onemoneyBox.classList.remove('selected');
+        radioSetu.checked = true;
+      } else {
+        onemoneyBox.classList.add('selected');
+        setuBox.classList.remove('selected');
+        radioOnemoney.checked = true;
+      }
+    }
+
+    function onConsentToggled() {
+      const checked = document.getElementById('aa-consent-checkbox').checked;
+      if (checked) {
+        document.getElementById('aa-validation-msg').textContent = '';
+      }
+    }
+
+    function executeAAVerification() {
+      const consentChecked = document.getElementById('aa-consent-checkbox').checked;
+      const validationMsg = document.getElementById('aa-validation-msg');
+      if (!consentChecked) {
+        validationMsg.textContent = '⚠️ Explicit consent is required to simulate Account Aggregator retrieval.';
+        return;
+      }
+
+      // Transition to simulated retrieval progress
+      document.getElementById('aa-body-content').style.display = 'none';
+      const progressContent = document.getElementById('aa-progress-content');
+      progressContent.style.display = 'block';
+
+      const icon = document.getElementById('aa-progress-icon');
+      const title = document.getElementById('aa-progress-title');
+      const detail = document.getElementById('aa-progress-detail');
+      const summary = document.getElementById('aa-success-summary');
+      const finishBtn = document.getElementById('btn-aa-finish');
+      const providerDisplay = document.getElementById('aa-provider-name-display');
+
+      providerDisplay.textContent = selectedAAProvider;
+      icon.textContent = '⏳';
+      title.textContent = 'Requesting consent token...';
+      detail.textContent = `Connecting to ${selectedAAProvider} sandbox rails...`;
+
+      // Visual sequence simulation: No real network request made
+      setTimeout(() => {
+        title.textContent = 'Consent recorded...';
+        detail.textContent = 'Simulating retrieval of consented financial statement...';
+      }, 700);
+
+      setTimeout(() => {
+        icon.textContent = '✓';
+        title.style.color = '#34d399';
+        title.textContent = '✓ Account Aggregator Verification Successful (DEMO / SANDBOX)';
+        detail.textContent = 'Simulated financial statements validated under RBI AA framework.';
+        summary.style.display = 'block';
+        finishBtn.style.display = 'block';
+      }, 1500);
+    }
+
+    function completeAAVerification() {
+      closeAAModal();
+      // Reuse canonical verification-success pathway
+      onVerificationCleared('Account Aggregator');
     }
 
     function resetForm() {
